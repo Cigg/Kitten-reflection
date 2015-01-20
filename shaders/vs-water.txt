@@ -1,0 +1,23 @@
+precision mediump float;
+
+attribute vec3 aVertexPosition;
+attribute vec3 aVertexNormal;
+attribute vec2 aVertexTextureCoord;
+
+uniform mat4 uMMatrix;
+uniform mat4 uPMatrix;
+uniform mat4 uVMatrix;
+uniform float uTime;
+
+varying vec4 vWorldSpaceNormal;
+varying vec2 vVertexTextureCoord;
+varying vec4 vWorldSpaceCoord;
+varying vec3 vModelSpaceCoord;
+
+void main() {
+	vWorldSpaceCoord = uMMatrix * vec4(aVertexPosition, 1.0);
+	vModelSpaceCoord = aVertexPosition;
+	gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+	vWorldSpaceNormal = uMMatrix * vec4(aVertexNormal, 0.0);
+	vVertexTextureCoord = aVertexTextureCoord;
+}
