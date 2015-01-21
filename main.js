@@ -126,6 +126,132 @@ var rttTexture;
 var vertBuffer;
 var textureProg;
 
+function makePlane(size, segments, callback) {
+	var mesh = {};
+	mesh.materials = [ {"vertexshader" : "shaders/vs-terrain.txt", "fragmentshader" : "shaders/fs-terrain.txt", "numindices" : segments*segments*6 } ];
+	
+	mesh.vertexPositions = [];
+	mesh.vertexNormals = [];
+	for( var i = 0; i <= segments; i++) {
+		for( var j = 0; j <= segments; j++) {
+			mesh.vertexPositions.push(size*(j/segments - 0.5));
+			mesh.vertexPositions.push(0.0); 
+			mesh.vertexPositions.push(size*(i/segments - 0.5));
+
+			mesh.vertexNormals.push(0);
+			mesh.vertexNormals.push(1); 
+			mesh.vertexNormals.push(0);
+		}
+	}
+
+	mesh.indices = [];
+	for( var i = 0; i < segments; i++) {
+		for( var j = 0; j < segments; j++) {
+			// first triangle
+			//	you are here->	1--3
+			// 					| /
+			// 					|/
+			// 					2
+			mesh.indices.push(i*(segments + 1) + j);
+			mesh.indices.push((i+1)*(segments + 1) + j);
+			mesh.indices.push(i*(segments + 1) + j + 1);
+
+			// second triangle
+			//    1
+			//   /|
+			//  / |
+			// 2--3
+			mesh.indices.push(i*(segments + 1) + j + 1);
+			mesh.indices.push((i+1)*(segments + 1) + j);
+			mesh.indices.push((i+1)*(segments + 1) + j + 1);
+		}
+	}
+
+	//console.log(JSON.stringify(mesh));
+
+	//this.init(mesh);	
+	callback(mesh);
+
+};
+
+// returns height of the terrain of a certain position
+function terrainHeight(xPos, yPos) {
+	return noise.simplex2(xPos * 0.5 , yPos * 0.5);
+}
+
+function crossProduct(v1, v2) {
+	var vecResult = [];
+
+  	vecResult[0] =  ((v1[1] * v2[2]) - (v1[2] * v2[1]));
+  	vecResult[1] = -((v1[0] * v2[2]) - (v1[2] * v2[0]));
+  	vecResult[2] =  ((v1[0] * v2[1]) - (v1[1] * v2[0]));
+
+  	return vecResult;
+}
+
+function normalize(v1) {
+	var vecResult = [];
+
+	var fMag = Math.sqrt( Math.pow(v1[0], 2) +
+	                    Math.pow(v1[1], 2) +
+	                    Math.pow(v1[2], 2)
+	                  );
+
+	vecResult[0] = v1[0] / fMag;
+	vecResult[1] = v1[1] / fMag;
+	vecResult[2] = v1[2] / fMag;
+
+  return vecResult;
+}
+
+function makeTerrain(size, segments, callback) {
+	var planeCreated = function(mesh) {
+		// height displacement
+		for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
+			var height = terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2]);
+			mesh.vertexPositions[i + 1] += 0.5*height + 1.0;
+			//console.log("height: " + height);
+		}
+
+		// calculate new normals
+		for(var i = 0; i < mesh.vertexNormals.length; i += 3) {
+			var v1 = [];
+			if( (i%(3*(segments + 1)) + 3) < 3*(segments + 1)) {
+				v1[0] = mesh.vertexPositions[i + 3] - mesh.vertexPositions[i];
+				v1[1] = mesh.vertexPositions[i + 4] - mesh.vertexPositions[i + 1];
+				v1[2] = mesh.vertexPositions[i + 5] - mesh.vertexPositions[i + 2];
+			}
+			else { // edge case
+				v1[0] = size/segments;
+				v1[1] = 0;
+				v1[2] = 0;
+			}
+
+			var v2 = [];
+			if( i + 3*(segments + 1) < 3*(segments + 1)*(segments + 1) ) {
+				v2[0] = mesh.vertexPositions[i + 3*(segments + 1)] - mesh.vertexPositions[i];
+				v2[1] = mesh.vertexPositions[i + 3*(segments + 1) + 1] - mesh.vertexPositions[i + 1];
+				v2[2] = mesh.vertexPositions[i + 3*(segments + 1) + 2] - mesh.vertexPositions[i + 2];
+			}
+			else { // edge case
+				v2[0] = 0;
+				v2[1] = 0;
+				v2[2] = size/segments;	
+			}
+
+			var normal = normalize(crossProduct(v2, v1));
+
+			mesh.vertexNormals[i] = normal[0];
+			mesh.vertexNormals[i + 1] = normal[1];
+			mesh.vertexNormals[i + 2] = normal[2];
+		}
+
+		callback(mesh);
+	}
+
+	this.makePlane(size, segments, planeCreated);
+};
+
 function initTextureFramebuffer() {
 	var verts = [
 	      1,  1,
@@ -191,8 +317,15 @@ function initScene() {
 	water.load('meshes/water.json', 50.0, thingLoaded);
 	cat.load('meshes/cat.json', 5.0, thingLoaded);
 
-	this.plane = new Mesh();
-	plane.makePlane(20, 200, thingLoaded);
+	// Generate terrain
+	this.terrain = new Mesh();
+	this.terrain.callback = thingLoaded;
+
+	var terrainGenerated = function(mesh) {
+		this.terrain.init(mesh);
+	}
+
+	makeTerrain(20, 80, terrainGenerated);
 }
 
 function initCubes() {
@@ -241,7 +374,7 @@ function drawScene() {
 	cubes.draw();
 	water.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));
 	cat.draw();
-	plane.draw();
+	terrain.draw();
 
 	// Draw the reflection to a square in the corner for debugging
 	if(debugReflection) {

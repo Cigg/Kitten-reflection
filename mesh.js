@@ -97,55 +97,6 @@ function Mesh() {
 		loadFile(file, function(x) { that.initJson(x); }, false, true);
 	};
 
-	this.makePlane = function(size, segments, callback) {
-		this.callback = callback;
-
-		var mesh = {};
-		mesh.materials = [ {"vertexshader" : "shaders/vs-terrain.txt", "fragmentshader" : "shaders/fs-terrain.txt", "numindices" : segments*segments*6 } ];
-		
-		mesh.vertexPositions = [];
-		mesh.vertexNormals = [];
-		for( var i = 0; i <= segments; i++) {
-			for( var j = 0; j <= segments; j++) {
-				mesh.vertexPositions.push(size*(j/segments - 0.5));
-				mesh.vertexPositions.push(0.0); 
-				mesh.vertexPositions.push(size*(i/segments - 0.5));
-
-				mesh.vertexNormals.push(0);
-				mesh.vertexNormals.push(1); 
-				mesh.vertexNormals.push(0);
-			}
-		}
-
-		mesh.indices = [];
-		for( var i = 0; i < segments; i++) {
-			for( var j = 0; j < segments; j++) {
-				// first triangle
-				//	you are here->	1--3
-				// 					| /
-				// 					|/
-				// 					2
-				mesh.indices.push(i*(segments + 1) + j);
-				mesh.indices.push((i+1)*(segments + 1) + j);
-				mesh.indices.push(i*(segments + 1) + j + 1);
-
-				// second triangle
-				//    1
-				//   /|
-				//  / |
-				// 2--3
-				mesh.indices.push(i*(segments + 1) + j + 1);
-				mesh.indices.push((i+1)*(segments + 1) + j);
-				mesh.indices.push((i+1)*(segments + 1) + j + 1);
-			}
-		}
-
-		//console.log(JSON.stringify(mesh));
-
-		this.init(mesh);
-
-	};
-
 	this.setMatrixUniforms = function(program) {
 		gl.uniformMatrix4fv(program.mMatrixUniform, false, modelMatrix().d);
 		gl.uniformMatrix4fv(program.pMatrixUniform, false, projectionMatrix().d);

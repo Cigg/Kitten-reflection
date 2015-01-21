@@ -13,6 +13,8 @@ uniform mat4 uReflectionViewMatrix;
 uniform sampler2D uReflectionTexture;
 uniform float uTime;
 
+float RENDER_WATER = 0.0;
+
 mat2 m2 = mat2(1.6,-1.2,1.2,1.6);
 
 //
@@ -133,6 +135,7 @@ float waterHeight( vec2 p )
 
 	wave += (snoise(vec2(p*0.004 + shift1))-.5)*smallWaveGain*0.5;
 	wave += (snoise(vec2(p*0.010 + shift1*1.3))-.5)*smallWaveGain*0.15;
+
 	float amp = smallWaveGain;
 	float smoothamp = 1.0;
 
@@ -158,46 +161,53 @@ void main() {
 	vec3 skyColor = vec3(135.0/255.0, 206.0/255.0, 235.0/255.0);
 	vec3 opaqueColor = vec3(0.05, 0.15, 0.2); // dark blue
 
-	// parameters in schlicks approximation
-	float minOpacity = 0.15;
-	float opaqueDepth = 2.0; // depth of the water when it becomes fully opaque
-	float minReflectivity = 0.05; // 0.02 for air->water
+	vec3 color;
+	float alpha = 1.0;
 
-	vec3 eye = uEyeCoord;
-	vec3 viewDirection = normalize (eye - vWorldSpaceCoord.xyz);
+	if(RENDER_WATER > 0.5) {
+		// parameters in schlicks approximation
+		float minOpacity = 0.15;
+		float opaqueDepth = 2.0; // depth of the water when it becomes fully opaque
+		float minReflectivity = 0.05; // 0.02 for air->water
 
-	float scale = 40.0;
-	float delta = scale/200.0;
-	vec2 xDiff = vec2(1.0, 0.0)*delta;
-	vec2 yDiff = vec2(0.0, 1.0)*delta;
+		vec3 eye = uEyeCoord;
+		vec3 viewDirection = normalize (eye - vWorldSpaceCoord.xyz);
 
-	vec3 surfaceNormal = normalize(vec3(waterHeight(scale*vWorldSpaceCoord.xz-xDiff) - waterHeight(scale*vWorldSpaceCoord.xz+xDiff), 1.0/scale, waterHeight(scale*vWorldSpaceCoord.xz-yDiff) - waterHeight(scale*vWorldSpaceCoord.xz+yDiff)));
-	float cosT1 = abs(dot(viewDirection, surfaceNormal));
-	// Reflectance
-	float c = 1.0 - cosT1;
-	float R = minReflectivity + (1.0 - minReflectivity) * c * c * c * c * c; //Schlick's approximation
-	// Water density
-	float depth = 1000.0;
-	float thickness = depth / max (cosT1, 0.01);
-	float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
-	// Premultiply
-	vec3 waterColor = opaqueColor * dWater;
+		float scale = 40.0;
+		float delta = scale/200.0;
+		vec2 xDiff = vec2(1.0, 0.0)*delta;
+		vec2 yDiff = vec2(0.0, 1.0)*delta;
 
-	// not correct. I think I need some kind of raymarching to determine the what will be reflected
-	vec2 textureOffset = 30.0*normalize(surfaceNormal.xz)*(1.0 - dot(surfaceNormal,vec3(0.0,1.0,0.0)));
-	vec3 blah = vModelSpaceCoord;
-	blah.xz += textureOffset;
-	vec4 vClipReflection = uPMatrix * uReflectionViewMatrix * uMMatrix * vec4(blah, 1.0);
-	vec2 vDeviceReflection = vClipReflection.st / vClipReflection.q;
-	vec2 vTextureReflection = vec2(0.5, 0.5) + 0.5 * vDeviceReflection;
-	vec4 reflectionTextureColor = texture2D (uReflectionTexture, vTextureReflection);
+		vec3 surfaceNormal = normalize(vec3(waterHeight(scale*vWorldSpaceCoord.xz-xDiff) - waterHeight(scale*vWorldSpaceCoord.xz+xDiff), 1.0/scale, waterHeight(scale*vWorldSpaceCoord.xz-yDiff) - waterHeight(scale*vWorldSpaceCoord.xz+yDiff)));
+		float cosT1 = abs(dot(viewDirection, surfaceNormal));
+		// Reflectance
+		float c = 1.0 - cosT1;
+		float R = minReflectivity + (1.0 - minReflectivity) * c * c * c * c * c; //Schlick's approximation
+		// Water density
+		float depth = 1000.0;
+		float thickness = depth / max (cosT1, 0.01);
+		float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
+		// Premultiply
+		vec3 waterColor = opaqueColor * dWater;
 
-	// Mix sky with reflection from objects
-	reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyColor.xyz*(1.0 - reflectionTextureColor.a)), 1.0);
+		// not correct. I think I need some kind of raymarching to determine the what will be reflected
+		vec2 textureOffset = 30.0*normalize(surfaceNormal.xz)*(1.0 - dot(surfaceNormal,vec3(0.0,1.0,0.0)));
+		vec3 blah = vModelSpaceCoord;
+		blah.xz += textureOffset;
+		vec4 vClipReflection = uPMatrix * uReflectionViewMatrix * uMMatrix * vec4(blah, 1.0);
+		vec2 vDeviceReflection = vClipReflection.st / vClipReflection.q;
+		vec2 vTextureReflection = vec2(0.5, 0.5) + 0.5 * vDeviceReflection;
+		vec4 reflectionTextureColor = texture2D (uReflectionTexture, vTextureReflection);
 
-	// Mix reflection with water color
-	vec3 color = (1.0 - R) * waterColor + R * reflectionTextureColor.rgb;
-	float alpha = R + (1.0 - R) * dWater;
+		// Mix sky with reflection from objects
+		reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyColor.xyz*(1.0 - reflectionTextureColor.a)), 1.0);
+
+		// Mix reflection with water color
+		color = (1.0 - R) * waterColor + R * reflectionTextureColor.rgb;
+		float alpha = R + (1.0 - R) * dWater;
+	} else {
+		color = opaqueColor;
+	}
 
 	gl_FragColor = vec4(color, alpha);
 }
