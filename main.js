@@ -1,5 +1,5 @@
 // For debugging
-var debugReflection = false;
+var debugReflection = true;
 
 var gl;
 
@@ -176,7 +176,12 @@ function makePlane(size, segments, callback) {
 
 // returns height of the terrain of a certain position
 function terrainHeight(xPos, yPos) {
-	return noise.simplex2(xPos * 0.5 , yPos * 0.5);
+	var h = noise.simplex2(xPos * 0.05 , yPos * 0.05);
+	h += noise.simplex2(xPos * 0.1 , yPos * 0.1)*0.5;
+	h += noise.simplex2(xPos * 0.2 , yPos * 0.2)*0.25;
+	h += noise.simplex2(xPos * 0.4 , yPos * 0.4)*0.125;
+	h -= 0.5;
+	return h;
 }
 
 function crossProduct(v1, v2) {
@@ -208,43 +213,87 @@ function makeTerrain(size, segments, callback) {
 	var planeCreated = function(mesh) {
 		// height displacement
 		for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
-			var height = terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2]);
-			mesh.vertexPositions[i + 1] += 0.5*height + 1.0;
+			// calculate height
+			var amp = 5.0;
+			var elevation = -1.0;
+			var height = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2]) + elevation;
+
+			if(height > -1.0) {
+				mesh.vertexPositions[i + 1] += height;
+
+				// calculate normals with central differences
+				var offset = (size/segments)/4;
+				var heightX1 = amp*terrainHeight(mesh.vertexPositions[i] + offset, mesh.vertexPositions[i + 2]) + elevation;
+				var heightX2 = amp*terrainHeight(mesh.vertexPositions[i] - offset, mesh.vertexPositions[i + 2]) + elevation;
+				var heightY1 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] + offset) + elevation;
+				var heightY2 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] - offset) + elevation;
+
+				var v1 = [];
+				v1[0] = offset;
+				v1[1] = heightX1 - height;
+				v1[2] = 0;
+
+				var v2 = [];
+				v2[0] = 0;
+				v2[1] = heightY1 - height;
+				v2[2] = offset;
+
+				var normal1 = normalize(crossProduct(v2, v1));
+
+				v1[0] = -offset;
+				v1[1] = heightX2 - height;
+				v1[2] = 0;
+
+				v2[0] = 0;
+				v2[1] = heightY2 - height;
+				v2[2] = -offset;
+
+				var normal2 = normalize(crossProduct(v2, v1));
+				var finalNormal = normalize([normal1[0] + normal2[0],normal1[1] + normal2[1],normal1[2] + normal2[2]]);
+
+				console.log("normal: " + normal1);
+				mesh.vertexNormals[i] = normal1[0];
+				mesh.vertexNormals[i + 1] = normal1[1];
+				mesh.vertexNormals[i + 2] = normal1[2];
+			}
+			else {
+				mesh.vertexPositions[i + 1] -= 0.1;
+			}
 			//console.log("height: " + height);
 		}
 
-		// calculate new normals
-		for(var i = 0; i < mesh.vertexNormals.length; i += 3) {
-			var v1 = [];
-			if( (i%(3*(segments + 1)) + 3) < 3*(segments + 1)) {
-				v1[0] = mesh.vertexPositions[i + 3] - mesh.vertexPositions[i];
-				v1[1] = mesh.vertexPositions[i + 4] - mesh.vertexPositions[i + 1];
-				v1[2] = mesh.vertexPositions[i + 5] - mesh.vertexPositions[i + 2];
-			}
-			else { // edge case
-				v1[0] = size/segments;
-				v1[1] = 0;
-				v1[2] = 0;
-			}
+		// // calculate new normals
+		// for(var i = 0; i < mesh.vertexNormals.length; i += 3) {
+		// 	var v1 = [];
+		// 	if( (i%(3*(segments + 1)) + 3) < 3*(segments + 1)) {
+		// 		v1[0] = mesh.vertexPositions[i + 3] - mesh.vertexPositions[i];
+		// 		v1[1] = mesh.vertexPositions[i + 4] - mesh.vertexPositions[i + 1];
+		// 		v1[2] = mesh.vertexPositions[i + 5] - mesh.vertexPositions[i + 2];
+		// 	}
+		// 	else { // edge case
+		// 		v1[0] = size/segments;
+		// 		v1[1] = 0;
+		// 		v1[2] = 0;
+		// 	}
 
-			var v2 = [];
-			if( i + 3*(segments + 1) < 3*(segments + 1)*(segments + 1) ) {
-				v2[0] = mesh.vertexPositions[i + 3*(segments + 1)] - mesh.vertexPositions[i];
-				v2[1] = mesh.vertexPositions[i + 3*(segments + 1) + 1] - mesh.vertexPositions[i + 1];
-				v2[2] = mesh.vertexPositions[i + 3*(segments + 1) + 2] - mesh.vertexPositions[i + 2];
-			}
-			else { // edge case
-				v2[0] = 0;
-				v2[1] = 0;
-				v2[2] = size/segments;	
-			}
+		// 	var v2 = [];
+		// 	if( i + 3*(segments + 1) < 3*(segments + 1)*(segments + 1) ) {
+		// 		v2[0] = mesh.vertexPositions[i + 3*(segments + 1)] - mesh.vertexPositions[i];
+		// 		v2[1] = mesh.vertexPositions[i + 3*(segments + 1) + 1] - mesh.vertexPositions[i + 1];
+		// 		v2[2] = mesh.vertexPositions[i + 3*(segments + 1) + 2] - mesh.vertexPositions[i + 2];
+		// 	}
+		// 	else { // edge case
+		// 		v2[0] = 0;
+		// 		v2[1] = 0;
+		// 		v2[2] = size/segments;	
+		// 	}
 
-			var normal = normalize(crossProduct(v2, v1));
+		// 	var normal = normalize(crossProduct(v2, v1));
 
-			mesh.vertexNormals[i] = normal[0];
-			mesh.vertexNormals[i + 1] = normal[1];
-			mesh.vertexNormals[i + 2] = normal[2];
-		}
+		// 	mesh.vertexNormals[i] = normal[0];
+		// 	mesh.vertexNormals[i + 1] = normal[1];
+		// 	mesh.vertexNormals[i + 2] = normal[2];
+		// }
 
 		callback(mesh);
 	}
@@ -325,7 +374,7 @@ function initScene() {
 		this.terrain.init(mesh);
 	}
 
-	makeTerrain(20, 80, terrainGenerated);
+	makeTerrain(100, 200, terrainGenerated);
 }
 
 function initCubes() {
@@ -354,6 +403,7 @@ function drawReflectionToBuffer() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	cubes.draw(reflectionPlane);
 	cat.draw(reflectionPlane);
+	terrain.draw(reflectionPlane);
 
 	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
     gl.generateMipmap(gl.TEXTURE_2D);

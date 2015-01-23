@@ -13,7 +13,7 @@ uniform mat4 uReflectionViewMatrix;
 uniform sampler2D uReflectionTexture;
 uniform float uTime;
 
-float RENDER_WATER = 0.0;
+float RENDER_WATER = 1.0;
 
 mat2 m2 = mat2(1.6,-1.2,1.2,1.6);
 

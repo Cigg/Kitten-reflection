@@ -1,5 +1,6 @@
 precision mediump float;
 
+uniform vec4 uClipPlane;
 uniform mat4 uMMatrix;
 uniform mat4 uPMatrix;
 uniform mat4 uVMatrix;
@@ -12,10 +13,14 @@ varying vec4 vWorldSpaceNormal;
 varying vec4 vWorldSpaceCoord;
 
 void main() {
- 	
+	float clipPos = dot (vWorldSpaceCoord.xyz, uClipPlane.xyz) + uClipPlane.w;
+    if(clipPos < -0.01)
+    	discard;
+
  	// diffuse light
 	float diff = dot(normalize(vec3(0,1,-1)), normalize(vWorldSpaceNormal.xyz));
 	diff = max(0.0, diff);
+
 	diff *= 0.6;
 	vec3 color = vec3(0.2, 0.5, 0.2);
 	color *= diff;
