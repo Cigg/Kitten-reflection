@@ -1,5 +1,5 @@
-// For debugging
-var debugReflection = true;
+// For debugging. Renders the reflection texture in the bottom left corner.
+var debugReflection = false;
 
 var gl;
 
@@ -176,11 +176,10 @@ function makePlane(size, segments, callback) {
 
 // returns height of the terrain of a certain position
 function terrainHeight(xPos, yPos) {
-	var h = noise.simplex2(xPos * 0.05 , yPos * 0.05);
-	h += noise.simplex2(xPos * 0.1 , yPos * 0.1)*0.5;
-	h += noise.simplex2(xPos * 0.2 , yPos * 0.2)*0.25;
-	h += noise.simplex2(xPos * 0.4 , yPos * 0.4)*0.125;
-	h -= 0.5;
+	var h = (noise.simplex2(xPos * 0.05 , yPos * 0.05));
+	h += (noise.simplex2(xPos * 0.1 , yPos * 0.1)*0.5);
+	h += (noise.simplex2(xPos * 0.2 , yPos * 0.2)*0.25);
+	h += (noise.simplex2(xPos * 0.4 , yPos * 0.4)*0.125);
 	return h;
 }
 
@@ -214,86 +213,48 @@ function makeTerrain(size, segments, callback) {
 		// height displacement
 		for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
 			// calculate height
-			var amp = 5.0;
-			var elevation = -1.0;
-			var height = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2]) + elevation;
+			var amp = 4.0;
+			var elevation = -1.5;
+			var height = terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2]);
+			height *= amp;
+			height += elevation;
 
-			if(height > -1.0) {
-				mesh.vertexPositions[i + 1] += height;
+			mesh.vertexPositions[i + 1] += height;
 
-				// calculate normals with central differences
-				var offset = (size/segments)/4;
-				var heightX1 = amp*terrainHeight(mesh.vertexPositions[i] + offset, mesh.vertexPositions[i + 2]) + elevation;
-				var heightX2 = amp*terrainHeight(mesh.vertexPositions[i] - offset, mesh.vertexPositions[i + 2]) + elevation;
-				var heightY1 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] + offset) + elevation;
-				var heightY2 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] - offset) + elevation;
+			// calculate normals with central differences
+			var offset = (size/segments)/2;
+			var heightX1 = amp*terrainHeight(mesh.vertexPositions[i] + offset, mesh.vertexPositions[i + 2]) + elevation;
+			var heightX2 = amp*terrainHeight(mesh.vertexPositions[i] - offset, mesh.vertexPositions[i + 2]) + elevation;
+			var heightY1 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] + offset) + elevation;
+			var heightY2 = amp*terrainHeight(mesh.vertexPositions[i], mesh.vertexPositions[i + 2] - offset) + elevation;
 
-				var v1 = [];
-				v1[0] = offset;
-				v1[1] = heightX1 - height;
-				v1[2] = 0;
+			var v1 = [];
+			v1[0] = offset;
+			v1[1] = heightX1 - height;
+			v1[2] = 0;
 
-				var v2 = [];
-				v2[0] = 0;
-				v2[1] = heightY1 - height;
-				v2[2] = offset;
+			var v2 = [];
+			v2[0] = 0;
+			v2[1] = heightY1 - height;
+			v2[2] = offset;
 
-				var normal1 = normalize(crossProduct(v2, v1));
+			var normal1 = normalize(crossProduct(v2, v1));
 
-				v1[0] = -offset;
-				v1[1] = heightX2 - height;
-				v1[2] = 0;
+			v1[0] = -offset;
+			v1[1] = heightX2 - height;
+			v1[2] = 0;
 
-				v2[0] = 0;
-				v2[1] = heightY2 - height;
-				v2[2] = -offset;
+			v2[0] = 0;
+			v2[1] = heightY2 - height;
+			v2[2] = -offset;
 
-				var normal2 = normalize(crossProduct(v2, v1));
-				var finalNormal = normalize([normal1[0] + normal2[0],normal1[1] + normal2[1],normal1[2] + normal2[2]]);
+			var normal2 = normalize(crossProduct(v2, v1));
+			var finalNormal = normalize([normal1[0] + normal2[0],normal1[1] + normal2[1],normal1[2] + normal2[2]]);
 
-				console.log("normal: " + normal1);
-				mesh.vertexNormals[i] = normal1[0];
-				mesh.vertexNormals[i + 1] = normal1[1];
-				mesh.vertexNormals[i + 2] = normal1[2];
-			}
-			else {
-				mesh.vertexPositions[i + 1] -= 0.1;
-			}
-			//console.log("height: " + height);
+			mesh.vertexNormals[i] = finalNormal[0];
+			mesh.vertexNormals[i + 1] = finalNormal[1];
+			mesh.vertexNormals[i + 2] = finalNormal[2];
 		}
-
-		// // calculate new normals
-		// for(var i = 0; i < mesh.vertexNormals.length; i += 3) {
-		// 	var v1 = [];
-		// 	if( (i%(3*(segments + 1)) + 3) < 3*(segments + 1)) {
-		// 		v1[0] = mesh.vertexPositions[i + 3] - mesh.vertexPositions[i];
-		// 		v1[1] = mesh.vertexPositions[i + 4] - mesh.vertexPositions[i + 1];
-		// 		v1[2] = mesh.vertexPositions[i + 5] - mesh.vertexPositions[i + 2];
-		// 	}
-		// 	else { // edge case
-		// 		v1[0] = size/segments;
-		// 		v1[1] = 0;
-		// 		v1[2] = 0;
-		// 	}
-
-		// 	var v2 = [];
-		// 	if( i + 3*(segments + 1) < 3*(segments + 1)*(segments + 1) ) {
-		// 		v2[0] = mesh.vertexPositions[i + 3*(segments + 1)] - mesh.vertexPositions[i];
-		// 		v2[1] = mesh.vertexPositions[i + 3*(segments + 1) + 1] - mesh.vertexPositions[i + 1];
-		// 		v2[2] = mesh.vertexPositions[i + 3*(segments + 1) + 2] - mesh.vertexPositions[i + 2];
-		// 	}
-		// 	else { // edge case
-		// 		v2[0] = 0;
-		// 		v2[1] = 0;
-		// 		v2[2] = size/segments;	
-		// 	}
-
-		// 	var normal = normalize(crossProduct(v2, v1));
-
-		// 	mesh.vertexNormals[i] = normal[0];
-		// 	mesh.vertexNormals[i + 1] = normal[1];
-		// 	mesh.vertexNormals[i + 2] = normal[2];
-		// }
 
 		callback(mesh);
 	}
@@ -363,10 +324,12 @@ function initScene() {
 	};
 
 	cube.load('meshes/cube.json', 1.0, thingLoaded);
-	water.load('meshes/water.json', 50.0, thingLoaded);
+	water.load('meshes/water.json', 25.0, thingLoaded);
 	cat.load('meshes/cat.json', 5.0, thingLoaded);
 
 	// Generate terrain
+	noise.seed(2);
+
 	this.terrain = new Mesh();
 	this.terrain.callback = thingLoaded;
 
@@ -374,7 +337,7 @@ function initScene() {
 		this.terrain.init(mesh);
 	}
 
-	makeTerrain(100, 200, terrainGenerated);
+	makeTerrain(50, 80, terrainGenerated);
 }
 
 function initCubes() {
@@ -422,9 +385,10 @@ function drawScene() {
 
 	viewMatrix().makeInverse(camera);
 	cubes.draw();
-	water.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));
 	cat.draw();
 	terrain.draw();
+	water.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));
+	
 
 	// Draw the reflection to a square in the corner for debugging
 	if(debugReflection) {

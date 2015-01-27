@@ -10,13 +10,12 @@ function Mesh() {
 		program.uDiffuseSampler = gl.getUniformLocation(program, 'uDiffuseSampler');
 		program.uEmissiveSampler = gl.getUniformLocation(program, 'uEmissiveSampler');
 		program.uReflectionClipPlane = gl.getUniformLocation(program, 'uClipPlane');
+		program.uTime = gl.getUniformLocation(program, 'uTime');
 
 		// Uniforms for drawReflection
 		program.uReflectionSampler = gl.getUniformLocation(program, 'uReflectionTexture');
 		program.uEyeCoord = gl.getUniformLocation(program, 'uEyeCoord');
-		program.uReflectionProjection = gl.getUniformLocation(program, 'uReflectionViewMatrix');
-		program.uTime = gl.getUniformLocation(program, 'uTime');
-		
+		program.uReflectionProjection = gl.getUniformLocation(program, 'uReflectionViewMatrix');		
 
 		if (--this.materialsToLoad == 0) {
 			this.callback();
@@ -103,7 +102,7 @@ function Mesh() {
 		gl.uniformMatrix4fv(program.vMatrixUniform, false, viewMatrix().d);
 	};
 
-	this.draw = function(reflectionView, drawToTexture) {
+	this.draw = function(reflectionView) {
 		var start = 0;
 		for (var p in this.programs) {
 			var program = this.programs[p];
