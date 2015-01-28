@@ -1,6 +1,9 @@
 // For debugging. Renders the reflection texture in the bottom left corner.
 var debugReflection = false;
 
+// size of plane
+var size = 50.0;
+
 var gl;
 
 var cube = new Mesh();
@@ -126,6 +129,8 @@ var rttTexture;
 var vertBuffer;
 var textureProg;
 
+var distanceFieldTexture;
+
 function makePlane(size, segments, callback) {
 	var mesh = {};
 	mesh.materials = [ {"vertexshader" : "shaders/vs-terrain.txt", "fragmentshader" : "shaders/fs-terrain.txt", "numindices" : segments*segments*6 } ];
@@ -210,6 +215,7 @@ function normalize(v1) {
 
 function makeTerrain(size, segments, callback) {
 	var planeCreated = function(mesh) {
+		var surfacePositions = [];
 		// height displacement
 		for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
 			// calculate height
@@ -256,11 +262,58 @@ function makeTerrain(size, segments, callback) {
 			mesh.vertexNormals[i + 2] = finalNormal[2];
 		}
 
+		console.log("terrain created");
 		callback(mesh);
 	}
 
 	this.makePlane(size, segments, planeCreated);
 };
+
+function textureFromPixelArray(dataArray, type, width, height) {
+    var dataTypedArray = new Uint8Array(dataArray); // Don't need to do this if the data is already in a typed array
+    //console.log("dataTypedArray: " + JSON.stringify(dataTypedArray));
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, type, width, height, 0, type, gl.UNSIGNED_BYTE, dataTypedArray);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    return texture;
+};
+
+function createDistanceField(mesh, plane, callback) {
+	var surfacePositions = [];
+	for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
+		var height = mesh.vertexPositions[i + 1];
+		if(Math.abs(height - plane[3]) < 0.5) {
+			surfacePositions.push([mesh.vertexPositions[i],mesh.vertexPositions[i+2]]);	
+		}
+	}
+
+	var distanceArray = [];
+	var arraySize = 128;
+	for (var i = 0; i < arraySize*arraySize; i++) {
+		var x = i%arraySize;
+		var y = Math.floor(i/arraySize);
+		x /= arraySize; y /= arraySize; // map between 0.0 - 1.0
+
+		// find nearest surfacePosition
+		var val = 255;
+		for(var j = 0; j < surfacePositions.length; j++) {
+			// map between 0.0 - 1.0
+			var surfx = (surfacePositions[j][0] + size/2)/size;
+			var surfy = (surfacePositions[j][1] + size/2)/size;
+			var d = 255*Math.sqrt(Math.pow(x - surfx, 2) + Math.pow(y - surfy, 2));
+			if(d < val)
+				val = d;
+		}
+
+		distanceArray[i] = val;
+	}
+
+	distanceFieldTexture = textureFromPixelArray(distanceArray, gl.ALPHA, arraySize, arraySize);
+	console.log("distance field texture created");
+	callback();
+}
 
 function initTextureFramebuffer() {
 	var verts = [
@@ -274,7 +327,7 @@ function initTextureFramebuffer() {
 
 	textureProg = loadProgram("shaders/vs-texture.txt", "shaders/fs-texture.txt", function() {});
 	textureProg.vertexPositionAttribute = gl.getAttribLocation(textureProg, 'aPosition');
-	textureProg.samplerUniform = gl.getUniformLocation(textureProg, "uSampler");
+	//textureProg.samplerUniform = gl.getUniformLocation(textureProg, "uSampler");
 
 	// create a frame buffer
     rttFramebuffer = gl.createFramebuffer();
@@ -315,16 +368,17 @@ function initScene() {
 
 	initTextureFramebuffer();
 
-	var stuffToLoad = 4;
+	var stuffToLoad = 5;
 	var thingLoaded = function() {
 		stuffToLoad--;
+		console.log("stuffToLoad: " + stuffToLoad);
 		// All things loaded. Start tick loop
 		if(stuffToLoad == 0)
 			tick();
 	};
 
 	cube.load('meshes/cube.json', 1.0, thingLoaded);
-	water.load('meshes/water.json', 25.0, thingLoaded);
+	water.load('meshes/water.json', size/2, thingLoaded);
 	cat.load('meshes/cat.json', 5.0, thingLoaded);
 
 	// Generate terrain
@@ -335,9 +389,10 @@ function initScene() {
 
 	var terrainGenerated = function(mesh) {
 		this.terrain.init(mesh);
+		createDistanceField(mesh, this.reflectionPlane, thingLoaded);
 	}
 
-	makeTerrain(50, 80, terrainGenerated);
+	makeTerrain(size, 80, terrainGenerated);
 }
 
 function initCubes() {
@@ -387,7 +442,7 @@ function drawScene() {
 	cubes.draw();
 	cat.draw();
 	terrain.draw();
-	water.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));
+	water.drawReflection(rttTexture, distanceFieldTexture, reflectionCamera.makeInverse(reflectionCamera));
 	
 
 	// Draw the reflection to a square in the corner for debugging
