@@ -5,23 +5,17 @@ var debugReflection = false;
 var size = 50.0;
 
 var gl;
-
-var cube = new Mesh();
-var water = new Mesh();
-var cat = new Mesh();
-
 var z = 0;
 var rot = new Matrix4x3();
 var camera = new Matrix4x3();
 var reflectionCamera = new Matrix4x3();
-
-var spinNode;
-var children = [];
-var cubes;
-
 var reflectionPlane = [0, 1, 0, 0];
 var eyePosition = [0.0, 10.0, 20.0];
+var lightDirection = [-0.2,1,-0.4]
 var speed = 0.3;
+
+var water = new Mesh();
+var cat = new Mesh();
 
 // FPS counter
 var elapsedTime = 0;
@@ -97,39 +91,10 @@ function updateCamera() {
 	Mesh.prototype.eyePos = eyePosition;
 }
 
-function DAGNode(ch) {
-	this.local = new Matrix4x3();
-	this.children = ch ? ch : [];
-}
-
-DAGNode.prototype = {
-	draw : function(r) {
-		pushModelMatrix().multiply(this.local);
-		for (var c in this.children) {
-			this.children[c].draw(r);
-		}
-		popModelMatrix();
-	}
-};
-
-function Geometry(mesh) {
-	this.mesh = mesh;
-}
-
-Geometry.prototype = {
-	draw : function(r) {
-		this.mesh.draw(r);
-	}
-};
-
-Geometry.prototype.prototype = DAGNode.prototype;
-
 var rttFramebuffer;
 var rttTexture;
 var vertBuffer;
 var textureProg;
-
-var distanceFieldTexture;
 
 function makePlane(size, segments, callback) {
 	var mesh = {};
@@ -280,41 +245,6 @@ function textureFromPixelArray(dataArray, type, width, height) {
     return texture;
 };
 
-function createDistanceField(mesh, plane, callback) {
-	var surfacePositions = [];
-	for(var i = 0; i < mesh.vertexPositions.length; i += 3) {
-		var height = mesh.vertexPositions[i + 1];
-		if(Math.abs(height - plane[3]) < 0.5) {
-			surfacePositions.push([mesh.vertexPositions[i],mesh.vertexPositions[i+2]]);	
-		}
-	}
-
-	var distanceArray = [];
-	var arraySize = 128;
-	for (var i = 0; i < arraySize*arraySize; i++) {
-		var x = i%arraySize;
-		var y = Math.floor(i/arraySize);
-		x /= arraySize; y /= arraySize; // map between 0.0 - 1.0
-
-		// find nearest surfacePosition
-		var val = 255;
-		for(var j = 0; j < surfacePositions.length; j++) {
-			// map between 0.0 - 1.0
-			var surfx = (surfacePositions[j][0] + size/2)/size;
-			var surfy = (surfacePositions[j][1] + size/2)/size;
-			var d = 255*Math.sqrt(Math.pow(x - surfx, 2) + Math.pow(y - surfy, 2));
-			if(d < val)
-				val = d;
-		}
-
-		distanceArray[i] = val;
-	}
-
-	distanceFieldTexture = textureFromPixelArray(distanceArray, gl.ALPHA, arraySize, arraySize);
-	console.log("distance field texture created");
-	callback();
-}
-
 function initTextureFramebuffer() {
 	var verts = [
 	      1,  1,
@@ -361,14 +291,13 @@ function initTextureFramebuffer() {
 }
 
 function initScene() {
-	initCubes();
-
+	Mesh.prototype.lightDirection = lightDirection;
 	updateCamera();
 	camera.multiply(rot.makeRotate(-3.14*0.18, 1,0,0));
 
 	initTextureFramebuffer();
 
-	var stuffToLoad = 5;
+	var stuffToLoad = 2;
 	var thingLoaded = function() {
 		stuffToLoad--;
 		console.log("stuffToLoad: " + stuffToLoad);
@@ -377,9 +306,7 @@ function initScene() {
 			tick();
 	};
 
-	cube.load('meshes/cube.json', 1.0, thingLoaded);
-	water.load('meshes/water.json', size/2, thingLoaded);
-	cat.load('meshes/cat.json', 5.0, thingLoaded);
+	cat.load('meshes/cat.json', size/8, thingLoaded);
 
 	// Generate terrain
 	noise.seed(2);
@@ -389,24 +316,9 @@ function initScene() {
 
 	var terrainGenerated = function(mesh) {
 		this.terrain.init(mesh);
-		createDistanceField(mesh, this.reflectionPlane, thingLoaded);
 	}
 
 	makeTerrain(size, 80, terrainGenerated);
-}
-
-function initCubes() {
-	spinNode = new DAGNode([new Geometry(cube)]);
-	for (var x = -2; x <= 2; x += 4) {
-		for (var y = -2; y <= 2; y += 2) {
-			var newNode = new DAGNode([spinNode]);
-			newNode.local.d[12] = x*2;
-			newNode.local.d[13] = y;
-			children[children.length] = newNode;
-		}
-	}
-
-	cubes = new DAGNode(children);
 }
 
 function drawReflectionToBuffer() {
@@ -419,7 +331,6 @@ function drawReflectionToBuffer() {
 	gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
 	gl.clearColor(0, 0, 0, 0);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	cubes.draw(reflectionPlane);
 	cat.draw(reflectionPlane);
 	terrain.draw(reflectionPlane);
 
@@ -429,21 +340,14 @@ function drawReflectionToBuffer() {
 }
 
 function drawScene() {
-	spinNode.local.makeRotate(z,1,0,0);
-	spinNode.local.multiply(rot.makeRotate(z,0,1,0));
-	cubes.local.makeRotate(z,0,1,0);
-
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	gl.clearColor(226.0/255.0, 248.0/255.0, 255.0/255.0, 1);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	viewMatrix().makeInverse(camera);
-	cubes.draw();
 	cat.draw();
-	terrain.draw();
-	water.drawReflection(rttTexture, distanceFieldTexture, reflectionCamera.makeInverse(reflectionCamera));
-	
+	terrain.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));	
 
 	// Draw the reflection to a square in the corner for debugging
 	if(debugReflection) {

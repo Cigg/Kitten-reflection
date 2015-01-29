@@ -1,17 +1,19 @@
 precision mediump float;
 uniform sampler2D uSampler;
 uniform vec3 uEyeCoord;
+uniform vec3 uLightDirection;
 uniform vec4 uClipPlane;
 
 varying vec2 vVertexTextureCoord;
 varying vec4 vWorldSpaceCoord;
+varying vec4 vWorldSpaceNormal;
 
 void main() {
 	float clipPos = dot (vWorldSpaceCoord.xyz, uClipPlane.xyz) + uClipPlane.w;
     if(clipPos < 0.0)
     	discard;
 
-	vec3 col = texture2D(uSampler, vVertexTextureCoord).xyz;
-	//float distFromEye = distance(vWorldSpaceCoord.xyz, uEyeCoord)*0.025;
+    vec3 col = texture2D(uSampler, vVertexTextureCoord).xyz*0.6;
+	
     gl_FragColor = vec4(col, 1.0);
 }

@@ -9,11 +9,11 @@ function Mesh() {
 		program.vMatrixUniform = gl.getUniformLocation(program, 'uVMatrix');
 		program.uDiffuseSampler = gl.getUniformLocation(program, 'uDiffuseSampler');
 		program.uReflectionClipPlane = gl.getUniformLocation(program, 'uClipPlane');
+		program.uLightDirection = gl.getUniformLocation(program, 'uLightDirection');
 		program.uTime = gl.getUniformLocation(program, 'uTime');
 
 		// Uniforms for drawReflection
 		program.uReflectionSampler = gl.getUniformLocation(program, 'uReflectionTexture');
-		program.uDistanceField = gl.getUniformLocation(program, 'uDistanceField');
 		program.uEyeCoord = gl.getUniformLocation(program, 'uEyeCoord');
 		program.uReflectionProjection = gl.getUniformLocation(program, 'uReflectionViewMatrix');		
 
@@ -124,15 +124,16 @@ function Mesh() {
 				gl.uniform1i(program.uDiffuseSampler, 0);
 			}
 			if (program.uReflectionClipPlane !== -1) {
-				if(reflectionView) {
+				if(reflectionView)
 					gl.uniform4fv(program.uReflectionClipPlane, reflectionView);
-				}
-				else {
-					gl.uniform4fv(program.uReflectionClipPlane, [0.0, 0.0, 0.0, 0.0]);
-				}
+				else
+					gl.uniform4fv(program.uReflectionClipPlane, [0,0,0,0]);
 			}
 			if(program.uEyeCoord) {
 				gl.uniform3fv(program.uEyeCoord, this.eyePos);
+			}
+			if(program.uLightDirection) {
+				gl.uniform3fv(program.uLightDirection, this.lightDirection);
 			}
 			if(program.uTime) {
 				var d = new Date();
@@ -145,7 +146,7 @@ function Mesh() {
 		}
 	};
 
-	this.drawReflection = function(reflectionTexture, distanceFieldTexture, reflectionProjection) {
+	this.drawReflection = function(reflectionTexture, reflectionProjection) {
 		var start = 0;
 		for (var p in this.programs) {
 			var program = this.programs[p];
@@ -169,21 +170,30 @@ function Mesh() {
 				gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
 				gl.uniform1i(program.uReflectionTexture, 0);
 			}
-			if(program.uDistanceField !== -1 && distanceFieldTexture) {
-				gl.activeTexture(gl.TEXTURE1);
-				gl.bindTexture(gl.TEXTURE_2D, distanceFieldTexture);
-				gl.uniform1i(program.uDistanceField, 1);
-			}
+			// if(program.uDistanceField !== -1 && distanceFieldTexture) {
+			// 	gl.activeTexture(gl.TEXTURE1);
+			// 	gl.bindTexture(gl.TEXTURE_2D, distanceFieldTexture);
+			// 	gl.uniform1i(program.uDistanceField, 1);
+			// }
 			if(program.uReflectionProjection && reflectionProjection) {
 				gl.uniformMatrix4fv(program.uReflectionProjection, false, reflectionProjection.d);
 			}
 			if(program.uEyeCoord) {
 				gl.uniform3fv(program.uEyeCoord, this.eyePos);
 			}
+			if(program.uLightDirection) {
+				gl.uniform3fv(program.uLightDirection, this.lightDirection);
+			}
 			if(program.uTime) {
 				var d = new Date();
 				gl.uniform1f(program.uTime, (d.getTime()-this.startTime)/1000.0);
 			}
+			if (program.uReflectionClipPlane !== -1) {
+				// "remove" clip plane used in previous render stage
+				gl.uniform4fv(program.uReflectionClipPlane, [0,0,0,0]);
+			}
+
+			gl.uniform4fv(program.uReflectionClipPlane, [0,1,0,10000]);
 
 			this.setMatrixUniforms(program);
 			gl.drawElements(gl.TRIANGLES, program.numindices, gl.UNSIGNED_SHORT, start * 2);

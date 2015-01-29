@@ -13,9 +13,12 @@ varying vec4 vWorldSpaceCoord;
 
 void main() {
 	vWorldSpaceCoord = uMMatrix*vec4(aVertexPosition, 1.0);
-	vec4 pos = uPMatrix * uVMatrix * vWorldSpaceCoord;
+	vWorldSpaceNormal = uMMatrix * vec4(aVertexNormal, 0.0);
+
+	vec4 pos;
+	vWorldSpaceCoord.y < 0.0 ?
+		pos = uPMatrix * uVMatrix * uMMatrix*vec4(aVertexPosition.x, 0.0, aVertexPosition.z, 1.0)
+		: pos = uPMatrix * uVMatrix * uMMatrix*vec4(aVertexPosition, 1.0);
 
 	gl_Position = pos;
-
-	vWorldSpaceNormal = uMMatrix * vec4(aVertexNormal, 0.0);
 }
