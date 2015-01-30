@@ -17,8 +17,10 @@ void main() {
 
 	vec4 pos;
 	vWorldSpaceCoord.y < 0.0 ?
-		pos = uPMatrix * uVMatrix * uMMatrix*vec4(aVertexPosition.x, 0.0, aVertexPosition.z, 1.0)
-		: pos = uPMatrix * uVMatrix * uMMatrix*vec4(aVertexPosition, 1.0);
+		pos = vec4(aVertexPosition.x, 0.1, aVertexPosition.z, 1.0)
+		: pos = vec4(aVertexPosition, 1.0);
+
+	pos = uPMatrix * uVMatrix * uMMatrix*pos;
 
 	gl_Position = pos;
 }

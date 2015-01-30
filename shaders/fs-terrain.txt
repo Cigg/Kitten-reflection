@@ -264,7 +264,6 @@ float noise( vec3 x )
 float waterHeight( vec2 p )
 {
   float smallWaveGain = 0.8;
-  float largeWaveGain = 0.05;
   float height = 0.0;
 
   vec2 shift1 = -0.001*vec2( uTime*160.0*2.0, uTime*120.0*2.0 );
@@ -274,7 +273,7 @@ float waterHeight( vec2 p )
 
   wave += sin(p.x*0.02+p.y*0.002+shift2.x*3.4)*5.0;
   wave += sin(p.x*0.03+p.y*0.01+shift2.x*4.2)*2.5 ;
-  wave *= largeWaveGain;
+  wave *= 0.05;
 
   wave += (snoise(vec2(p*0.004 + shift1))-.5)*smallWaveGain*0.5;
   wave += (snoise(vec2(p*0.010 + shift1*1.3))-.5)*smallWaveGain*0.15;
@@ -300,7 +299,17 @@ float waterHeight( vec2 p )
   return height;
 }
 
+vec3 lightPosition() {
+  return vec3(0.0, sin(-uTime*0.5), cos(-uTime*0.5));
+}
+
+vec3 lightColor(vec3 lightPos) {
+
+  return vec3(abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.4 + 1.0,abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.1 + 1.0, 1.0);
+}
+
 void main() {
+  vec3 light = lightPosition();
 	float clipPos = dot (vWorldSpaceCoord.xyz, uClipPlane.xyz) + uClipPlane.w;
   if(clipPos < 0.0)
   	discard;
@@ -315,9 +324,10 @@ void main() {
 
   // diffuse light
   vec3 finalRockColor = rockColor(vWorldSpaceCoord.xyz);
-	float diff = dot(normalize(uLightDirection), surfaceNormal);
+  vec3 lColor = lightColor(light);
+	float diff = dot(normalize(light), surfaceNormal);
 	diff = max(0.0, diff);
-	finalRockColor *= diff;
+	finalRockColor *= lColor*diff;
 
   vec3 skyColor = vec3(135.0/255.0, 206.0/255.0, 235.0/255.0);
   vec3 opaqueColor = vec3(0.05, 0.15, 0.2); // dark blue
@@ -365,15 +375,19 @@ void main() {
   vec2 vTextureReflection = vec2(0.5, 0.5) + 0.5 * vDeviceReflection;
   vec4 reflectionTextureColor = texture2D (uReflectionTexture, vTextureReflection);
 
+
+
+  skyColor = 0.7*lightColor(light);
+  //waterColor = (0.5*opaqueColor+0.5*lightColor(light))*diff;
   // Mix sky with reflection from objects
-  reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyColor.xyz*(1.0 - reflectionTextureColor.a)), 1.0);
+  reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyColor*(1.0 - reflectionTextureColor.a)), 1.0);
 
   // Mix reflection with water color
   color = (1.0 - R) * waterColor + R * reflectionTextureColor.rgb;
   alpha = R + (1.0 - R) * dWater;
 
   depth > 0.0 ? color = mix(finalRockColor, color, alpha)
-    : color = finalRockColor;    
+    : color = finalRockColor;
 
 	gl_FragColor = vec4(color, 1.0);
 }

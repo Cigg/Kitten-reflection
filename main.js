@@ -262,8 +262,8 @@ function initTextureFramebuffer() {
 	// create a frame buffer
     rttFramebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-    rttFramebuffer.width = 512;
-    rttFramebuffer.height = 512;
+    rttFramebuffer.width = 256;
+    rttFramebuffer.height = 256;
 
     rttTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, rttTexture);
