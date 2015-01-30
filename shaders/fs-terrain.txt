@@ -300,12 +300,32 @@ float waterHeight( vec2 p )
 }
 
 vec3 lightPosition() {
-  return vec3(0.0, sin(-uTime*0.5), cos(-uTime*0.5));
+  float lightSpeed = 0.2;
+  return normalize(vec3(0.0, sin(-uTime*lightSpeed), cos(-uTime*lightSpeed)));
 }
 
 vec3 lightColor(vec3 lightPos) {
+   return vec3(abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.4 + 1.0,abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.1 + 1.0, 1.0);
+}
 
-  return vec3(abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.4 + 1.0,abs(lightPos.z)*smoothstep(0.8, 1.0, abs(lightPos.z))*0.1 + 1.0, 1.0);
+vec3 skyColor(vec3 surfaceNormal, vec3 viewDirection) {
+  vec3 sky = vec3(135.0/255.0, 206.0/255.0, 235.0/255.0);
+  vec3 sun = vec3(1.0, 0.6, 0.5);
+
+  float diff = dot(surfaceNormal, lightPosition());
+  sky *= diff;
+
+  vec3 specularReflection;
+  if (dot(surfaceNormal, lightPosition()) < 0.0) {
+    specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+  }
+  else {
+    specularReflection = sun * pow(max(0.0, dot(reflect(-lightPosition(), surfaceNormal), viewDirection)),
+      30.0);
+  }
+    
+
+  return sky + specularReflection;
 }
 
 void main() {
@@ -314,6 +334,7 @@ void main() {
   if(clipPos < 0.0)
   	discard;
 
+  // ROCK STUFF
 	float delta = 1.0/50.0;
 	vec3 xDiff = vec3(1.0, 0.0, 0.0)*delta;
 	vec3 yDiff = vec3(0.0, 0.0, 1.0)*delta;
@@ -324,14 +345,13 @@ void main() {
 
   // diffuse light
   vec3 finalRockColor = rockColor(vWorldSpaceCoord.xyz);
-  vec3 lColor = lightColor(light);
+  vec3 lightCol = lightColor(light);
 	float diff = dot(normalize(light), surfaceNormal);
 	diff = max(0.0, diff);
-	finalRockColor *= lColor*diff;
+	finalRockColor *= lightCol*diff;
 
-  vec3 skyColor = vec3(135.0/255.0, 206.0/255.0, 235.0/255.0);
+  // WATER STUFF
   vec3 opaqueColor = vec3(0.05, 0.15, 0.2); // dark blue
-
   vec3 color;
   float alpha;
 
@@ -362,7 +382,7 @@ void main() {
   float thickness = depth / max (cosT1, 0.01);
   float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
   // Premultiply
-  vec3 waterColor = opaqueColor * dWater;
+  vec3 waterCol = opaqueColor * dWater;
 
   // Wil not give correct reflection. I think I need some kind of raymarching to determine the what 
   // will be reflected in this pixel
@@ -377,13 +397,12 @@ void main() {
 
 
 
-  skyColor = 0.7*lightColor(light);
-  //waterColor = (0.5*opaqueColor+0.5*lightColor(light))*diff;
+  vec3 skyCol = skyColor(surfaceNormal, viewDirection);
   // Mix sky with reflection from objects
-  reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyColor*(1.0 - reflectionTextureColor.a)), 1.0);
+  reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyCol*(1.0 - reflectionTextureColor.a)), 1.0);
 
   // Mix reflection with water color
-  color = (1.0 - R) * waterColor + R * reflectionTextureColor.rgb;
+  color = (1.0 - R) * waterCol + R * reflectionTextureColor.rgb;
   alpha = R + (1.0 - R) * dWater;
 
   depth > 0.0 ? color = mix(finalRockColor, color, alpha)

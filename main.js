@@ -331,7 +331,7 @@ function drawReflectionToBuffer() {
 	gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
 	gl.clearColor(0, 0, 0, 0);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	cat.draw(reflectionPlane);
+	//cat.draw(reflectionPlane);
 	terrain.draw(reflectionPlane);
 
 	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
@@ -342,11 +342,11 @@ function drawReflectionToBuffer() {
 function drawScene() {
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-	gl.clearColor(226.0/255.0, 248.0/255.0, 255.0/255.0, 1);
+	gl.clearColor(0.2, 0.2, 0.2, 1.0);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	viewMatrix().makeInverse(camera);
-	cat.draw();
+	//cat.draw();
 	terrain.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));	
 
 	// Draw the reflection to a square in the corner for debugging
