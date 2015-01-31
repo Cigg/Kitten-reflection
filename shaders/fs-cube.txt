@@ -1,6 +1,7 @@
 precision mediump float;
 uniform vec4 uClipPlane;
 uniform vec3 uEyeCoord;
+uniform float uSpeed;
 
 varying vec4 vWorldSpaceNormal;
 varying vec4 vWorldSpaceCoord;

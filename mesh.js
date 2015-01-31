@@ -11,6 +11,7 @@ function Mesh() {
 		program.uReflectionClipPlane = gl.getUniformLocation(program, 'uClipPlane');
 		program.uLightDirection = gl.getUniformLocation(program, 'uLightDirection');
 		program.uTime = gl.getUniformLocation(program, 'uTime');
+		program.uSpeed = gl.getUniformLocation(program, 'uSpeed');
 
 		// Uniforms for drawReflection
 		program.uReflectionSampler = gl.getUniformLocation(program, 'uReflectionTexture');
@@ -139,6 +140,12 @@ function Mesh() {
 				var d = new Date();
 				gl.uniform1f(program.uTime, (d.getTime()-this.startTime)/1000.0);
 			}
+			if(program.uSpeed) {
+				if(this.speed)
+					gl.uniform1f(program.uSpeed, this.speed);
+				else
+					gl.uniform1f(program.uSpeed, 0.1);
+			}
 
 			this.setMatrixUniforms(program);
 			gl.drawElements(gl.TRIANGLES, program.numindices, gl.UNSIGNED_SHORT, start * 2);
@@ -187,6 +194,12 @@ function Mesh() {
 			if(program.uTime) {
 				var d = new Date();
 				gl.uniform1f(program.uTime, (d.getTime()-this.startTime)/1000.0);
+			}
+			if(program.uSpeed) {
+				if(this.speed)
+					gl.uniform1f(program.uSpeed, this.speed);
+				else
+					gl.uniform1f(program.uSpeed, 0.1);
 			}
 			if (program.uReflectionClipPlane !== -1) {
 				// "remove" clip plane used in previous render stage

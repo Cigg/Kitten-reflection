@@ -1,7 +1,7 @@
 {
   "materials" : [ {"vertexshader" : "shaders/vs-cat.txt", "fragmentshader" : "shaders/fs-cat.txt", "numindices" : 6, "diffuse" : "cat.png"} ],
   "indices" : [0, 1, 2, 2, 1, 3],
-  "vertexPositions" : [-1,0,-4, 1,0,-4, -1,2,-4, 1,2,-4],
+  "vertexPositions" : [1,0,-4, 3,0,-4, 1,2,-4, 3,2,-4],
   "vertexNormals" : [0,0,1, 0,0,1, 0,0,1, 0,0,1],
   "vertexTextureCoords" : [0,0, 1,0, 0,1, 1,1]
 }

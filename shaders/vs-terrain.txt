@@ -8,12 +8,13 @@ uniform mat4 uPMatrix;
 uniform mat4 uVMatrix;
 uniform float uTime;
 
-varying vec4 vWorldSpaceNormal;
-varying vec4 vWorldSpaceCoord;
+varying vec3 vWorldSpaceNormal;
+varying vec3 vWorldSpaceCoord;
 
 void main() {
-	vWorldSpaceCoord = uMMatrix*vec4(aVertexPosition, 1.0);
-	vWorldSpaceNormal = uMMatrix * vec4(aVertexNormal, 0.0);
+	vec4 worldPos = uMMatrix*vec4(aVertexPosition, 1.0);
+	vWorldSpaceCoord = worldPos.xyz;
+	vWorldSpaceNormal = normalize(aVertexNormal);
 
 	vec4 pos;
 	vWorldSpaceCoord.y < 0.0 ?

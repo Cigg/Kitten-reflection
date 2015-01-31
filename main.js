@@ -12,7 +12,8 @@ var reflectionCamera = new Matrix4x3();
 var reflectionPlane = [0, 1, 0, 0];
 var eyePosition = [0.0, 10.0, 20.0];
 var lightDirection = [-0.2,1,-0.4]
-var speed = 0.3;
+var lightSpeed = 0.1;
+var speed = 0.2;
 
 var water = new Mesh();
 var cat = new Mesh();
@@ -292,6 +293,7 @@ function initTextureFramebuffer() {
 
 function initScene() {
 	Mesh.prototype.lightDirection = lightDirection;
+	Mesh.prototype.speed = lightSpeed;
 	updateCamera();
 	camera.multiply(rot.makeRotate(-3.14*0.18, 1,0,0));
 
@@ -331,7 +333,7 @@ function drawReflectionToBuffer() {
 	gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
 	gl.clearColor(0, 0, 0, 0);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	//cat.draw(reflectionPlane);
+	cat.draw(reflectionPlane);
 	terrain.draw(reflectionPlane);
 
 	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
@@ -346,7 +348,7 @@ function drawScene() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	viewMatrix().makeInverse(camera);
-	//cat.draw();
+	cat.draw();
 	terrain.drawReflection(rttTexture, reflectionCamera.makeInverse(reflectionCamera));	
 
 	// Draw the reflection to a square in the corner for debugging
