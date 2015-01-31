@@ -295,24 +295,30 @@ void main() {
 	float delta = 1.0/50.0;
 	vec3 xDiff = vec3(1.0, 0.0, 0.0)*delta;
 	vec3 yDiff = vec3(0.0, 0.0, 1.0)*delta;
-  // bump mapping
-	vec3 surfaceNormal = normalize(vec3(rockHeight(vWorldSpaceCoord-xDiff) - rockHeight(vWorldSpaceCoord+xDiff), 1.0, rockHeight(vWorldSpaceCoord-yDiff) - rockHeight(vWorldSpaceCoord+yDiff)));
 
-  vec3 objectNormal = vWorldSpaceNormal;
-  vec3 tangent = normalize(cross(objectNormal, vec3(0.0,1.0,0.0)));
-  vec3 bitangent = cross (objectNormal, tangent);
-  vec3 v;
-  v.x = dot (lightPos, tangent);
-  v.z = dot (lightPos, bitangent);
-  v.y = dot (lightPos, objectNormal);
-  // Change lightpos instead of adjusting the surfacenormal to the objects normal
-  vec3 adjustedLightPos = normalize (v);
-
-  // diffuse light
   vec3 finalRockColor = rockColor(vWorldSpaceCoord);
-	float diff = dot(normalize(adjustedLightPos), surfaceNormal);
-	diff = max(0.05, diff);
-	finalRockColor *= lightColor(lightPos)*diff;
+  vec3 surfaceNormal;
+  float diff;
+
+  // no need to do bump mapping where the water will be fully opaque
+  if( vWorldSpaceCoord.y > -3.0) {
+  	surfaceNormal = normalize(vec3(rockHeight(vWorldSpaceCoord-xDiff) - rockHeight(vWorldSpaceCoord+xDiff), 1.0, rockHeight(vWorldSpaceCoord-yDiff) - rockHeight(vWorldSpaceCoord+yDiff)));
+
+    vec3 objectNormal = vWorldSpaceNormal;
+    vec3 tangent = normalize(cross(objectNormal, vec3(0.0,1.0,0.0)));
+    vec3 bitangent = cross (objectNormal, tangent);
+    vec3 v;
+    v.x = dot (lightPos, tangent);
+    v.z = dot (lightPos, bitangent);
+    v.y = dot (lightPos, objectNormal);
+    // Change lightpos instead of adjusting the surfacenormal to the objects normal
+    vec3 adjustedLightPos = normalize (v);
+
+    // diffuse light
+  	diff = dot(normalize(adjustedLightPos), surfaceNormal);
+  	diff = max(0.05, diff);
+  	finalRockColor *= lightColor(lightPos)*diff;
+  }
 
   // WATER STUFF
   vec3 opaqueColor = vec3(0.03, 0.09, 0.13); // dark blue
