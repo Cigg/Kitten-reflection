@@ -1,5 +1,5 @@
 // For debugging. Renders the reflection texture in the bottom left corner.
-var debugReflection = true;
+var debugReflection = false;
 
 // size of plane
 var size = 50.0;
