@@ -1,5 +1,5 @@
 // For debugging. Renders the reflection texture in the bottom left corner.
-var debugReflection = false;
+var debugReflection = true;
 
 // size of plane
 var size = 50.0;
@@ -10,7 +10,8 @@ var rot = new Matrix4x3();
 var camera = new Matrix4x3();
 var reflectionCamera = new Matrix4x3();
 var reflectionPlane = [0, 1, 0, 0];
-var eyePosition = [0.0, 10.0, 20.0];
+var eyePosition = [-14.0, 10.0, -20.0];
+var angle = 35;
 var lightDirection = [-0.2,1,-0.4]
 var lightSpeed = 0.1;
 var speed = 0.2;
@@ -56,28 +57,16 @@ function handleKeyUp(event) {
 }
 
 function handleKeys() {
-    if (currentlyPressedKeys[33]) {
-		// Page Up
-		
-    }
-    if (currentlyPressedKeys[34]) {
-		// Page Down
-		
-    }
-    if (currentlyPressedKeys[37]) {
-		// Left cursor key
+    if (currentlyPressedKeys[65]) { // a
 		eyePosition[0] -= speed;
     }
-    if (currentlyPressedKeys[39]) {
-		// Right cursor key
+    if (currentlyPressedKeys[68]) { // d		
 		eyePosition[0] += speed;
     }
-	if (currentlyPressedKeys[38]) {
-		// Up cursor key
+	if (currentlyPressedKeys[87]) { // w		
 		eyePosition[2] -= speed;	
 	}
-    if (currentlyPressedKeys[40]) {
-		// Down cursor key
+    if (currentlyPressedKeys[83]) { // s		
 		eyePosition[2] += speed;
 	}
 
@@ -263,8 +252,8 @@ function initTextureFramebuffer() {
 	// create a frame buffer
     rttFramebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-    rttFramebuffer.width = 256;
-    rttFramebuffer.height = 256;
+    rttFramebuffer.width = 512;
+    rttFramebuffer.height = 512;
 
     rttTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, rttTexture);
@@ -294,8 +283,9 @@ function initTextureFramebuffer() {
 function initScene() {
 	Mesh.prototype.lightDirection = lightDirection;
 	Mesh.prototype.speed = lightSpeed;
+	Mesh.prototype.resolution = [gl.viewportWidth, gl.viewportHeight];
 	updateCamera();
-	camera.multiply(rot.makeRotate(-3.14*0.18, 1,0,0));
+	camera.multiply(rot.makeRotate(-3.14*angle/180.0, 1,0,0));
 
 	initTextureFramebuffer();
 
@@ -357,7 +347,7 @@ function drawScene() {
 		gl.bindTexture(gl.TEXTURE_2D, rttTexture);
 		gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
 		gl.vertexAttribPointer(textureProg.vertexPositionAttribute, 2, gl.FLOAT, false, 0, 0);
-		gl.viewport(0, 0, 300, 300);
+		gl.viewport(0, 0, 200, 200);
 		//gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}

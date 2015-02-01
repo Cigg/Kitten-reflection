@@ -10,6 +10,7 @@ uniform mat4 uReflectionViewMatrix;
 uniform sampler2D uReflectionTexture;
 uniform float uTime;
 uniform float uSpeed;
+uniform vec2 uResolution;
 
 varying vec3 vWorldSpaceCoord;
 varying vec3 vWorldSpaceNormal;
@@ -259,13 +260,14 @@ float waterHeight( vec2 p )
 }
 
 vec3 lightPosition() {
+  //return normalize(vec3(0.0, 1.0, 0.5));
   return normalize(vec3(0.0, sin(-uTime*uSpeed), cos(-uTime*uSpeed)));
 }
 
 vec3 lightColor(vec3 lightPos) {
-   return vec3( (1.0 - lightPos.y)*smoothstep(0.7, 1.3, (1.0 - lightPos.y))*0.5 + 1.0, // red
-                (1.0 - lightPos.y)*smoothstep(0.7, 1.3, (1.0 - lightPos.y))*0.2 + 1.0, // green
-                1.0); //blue
+   return vec3( (1.0 - lightPos.y)*0.8 + 1.0, // red
+                (1.0 - lightPos.y)*0.2 + 1.0, // green
+                -(1.0 - lightPos.y)*0.3 + 1.0); //blue
 }
 
 vec3 skyColor(vec3 lightPos, vec3 surfaceNormal, vec3 viewDirection) {
@@ -275,12 +277,12 @@ vec3 skyColor(vec3 lightPos, vec3 surfaceNormal, vec3 viewDirection) {
                 1.0)); //blue
 
   float diff = dot(surfaceNormal, lightPos);
-  diff = max(0.3, diff);
+  diff = max(0.6, diff);
   sky *= diff;
 
   vec3 specularReflection;
   dot(surfaceNormal, lightPos) < 0.0 ? specularReflection = vec3(0.0) 
-    : specularReflection = 5.0 * sun * pow(max(0.0, dot(reflect(-lightPos, surfaceNormal), viewDirection)), 50.0);
+    : specularReflection = 5.0 * sun * pow(max(0.0, dot(reflect(-lightPos, surfaceNormal), viewDirection)), 70.0);
     
   return sky + specularReflection;
 }
@@ -326,7 +328,7 @@ void main() {
   // parameters in schlicks approximation
   float minOpacity = 0.15;
   float opaqueDepth = 3.0; // depth of the water when it becomes fully opaque
-  float minReflectivity = 0.05; // 0.02 for air->water 
+  float minReflectivity = 0.1; // 0.02 for air->water 
 
   vec3 eye = uEyeCoord;
   //vec3 viewDirection = normalize (eye - vWorldSpaceCoord.xyz);
@@ -348,16 +350,15 @@ void main() {
   float depth = -vWorldSpaceCoord.y;
   float thickness = depth / max (cosT1, 0.01);
   float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
-  // Premultiply
+
   vec3 waterCol = opaqueColor * dWater;
   diff = dot(normalize(lightPos), surfaceNormal);
-  diff = max(0.0, diff);
-  diff += 0.1;
+  diff = max(0.2, diff);
   waterCol *= diff;
 
-  // Wil not give correct reflection. I think I need some kind of raymarching to determine the what 
-  // will be reflected in this pixel
-  vec2 textureOffset = 30.0*normalize(surfaceNormal.xz)*(1.0 - dot(surfaceNormal,vec3(0.0,1.0,0.0)));
+  // Just a bad approximation. Some kind of raytracing is needed in order 
+  // to know what really is reflected in the surface
+  vec2 textureOffset = 20.0*normalize(surfaceNormal.xz)*(1.0 - dot(surfaceNormal,vec3(0.0,1.0,0.0)));
   vec3 blah = vWorldSpaceCoord.xyz;
   blah.y = 0.0;
   blah.xz += textureOffset;
@@ -366,8 +367,8 @@ void main() {
   vec2 vTextureReflection = vec2(0.5, 0.5) + 0.5 * vDeviceReflection;
   vec4 reflectionTextureColor = texture2D (uReflectionTexture, vTextureReflection);
 
-  vec3 skyCol = skyColor(lightPosition(), surfaceNormal, viewDirection);
   // Mix sky with reflection from objects
+  vec3 skyCol = skyColor(lightPosition(), surfaceNormal, viewDirection);
   reflectionTextureColor = vec4((reflectionTextureColor.xyz*reflectionTextureColor.a + skyCol*(1.0 - reflectionTextureColor.a)), 1.0);
 
   // Mix reflection with water color

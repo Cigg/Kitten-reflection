@@ -12,6 +12,7 @@ function Mesh() {
 		program.uLightDirection = gl.getUniformLocation(program, 'uLightDirection');
 		program.uTime = gl.getUniformLocation(program, 'uTime');
 		program.uSpeed = gl.getUniformLocation(program, 'uSpeed');
+		program.uResolution = gl.getUniformLocation(program, 'uResolution');
 
 		// Uniforms for drawReflection
 		program.uReflectionSampler = gl.getUniformLocation(program, 'uReflectionTexture');
@@ -128,7 +129,7 @@ function Mesh() {
 				if(reflectionView)
 					gl.uniform4fv(program.uReflectionClipPlane, reflectionView);
 				else
-					gl.uniform4fv(program.uReflectionClipPlane, [0,0,0,0]);
+					gl.uniform4fv(program.uReflectionClipPlane, [0,1,0,0]);
 			}
 			if(program.uEyeCoord) {
 				gl.uniform3fv(program.uEyeCoord, this.eyePos);
@@ -139,6 +140,9 @@ function Mesh() {
 			if(program.uTime) {
 				var d = new Date();
 				gl.uniform1f(program.uTime, (d.getTime()-this.startTime)/1000.0);
+			}
+			if(program.uResolution) {
+				gl.uniform2fv(program.uResolution, this.resolution);
 			}
 			if(program.uSpeed) {
 				if(this.speed)
@@ -177,11 +181,6 @@ function Mesh() {
 				gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
 				gl.uniform1i(program.uReflectionTexture, 0);
 			}
-			// if(program.uDistanceField !== -1 && distanceFieldTexture) {
-			// 	gl.activeTexture(gl.TEXTURE1);
-			// 	gl.bindTexture(gl.TEXTURE_2D, distanceFieldTexture);
-			// 	gl.uniform1i(program.uDistanceField, 1);
-			// }
 			if(program.uReflectionProjection && reflectionProjection) {
 				gl.uniformMatrix4fv(program.uReflectionProjection, false, reflectionProjection.d);
 			}
@@ -201,12 +200,13 @@ function Mesh() {
 				else
 					gl.uniform1f(program.uSpeed, 0.1);
 			}
+			if(program.uResolution) {
+				gl.uniform2fv(program.uResolution, this.resolution);
+			}
 			if (program.uReflectionClipPlane !== -1) {
 				// "remove" clip plane used in previous render stage
 				gl.uniform4fv(program.uReflectionClipPlane, [0,0,0,0]);
 			}
-
-			gl.uniform4fv(program.uReflectionClipPlane, [0,1,0,10000]);
 
 			this.setMatrixUniforms(program);
 			gl.drawElements(gl.TRIANGLES, program.numindices, gl.UNSIGNED_SHORT, start * 2);

@@ -1,4 +1,5 @@
 precision mediump float;
+
 attribute vec4 aVertexPosition;
 varying vec2 vVertexTextureCoord;
 
