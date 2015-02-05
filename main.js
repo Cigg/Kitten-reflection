@@ -88,7 +88,7 @@ var textureProg;
 
 function makePlane(size, segments, callback) {
 	var mesh = {};
-	mesh.materials = [ {"vertexshader" : "shaders/vs-terrain.txt", "fragmentshader" : "shaders/fs-terrain.txt", "numindices" : segments*segments*6 } ];
+	mesh.materials = [ {"vertexshader" : "shaders/vs-terrain.glsl", "fragmentshader" : "shaders/fs-terrain.glsl", "numindices" : segments*segments*6 } ];
 	
 	mesh.vertexPositions = [];
 	mesh.vertexNormals = [];
@@ -245,7 +245,7 @@ function initTextureFramebuffer() {
 	      1, -1,
 	];
 
-	textureProg = loadProgram("shaders/vs-texture.txt", "shaders/fs-texture.txt", function() {});
+	textureProg = loadProgram("shaders/vs-texture.glsl", "shaders/fs-texture.glsl", function() {});
 	textureProg.vertexPositionAttribute = gl.getAttribLocation(textureProg, 'aPosition');
 	//textureProg.samplerUniform = gl.getUniformLocation(textureProg, "uSampler");
 
